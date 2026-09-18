@@ -2,6 +2,8 @@ package com.vocis.sensor.telecom
 
 import android.telecom.Call
 import android.telecom.CallScreeningService
+import com.vocis.core.domain.model.ProtectionAction
+import com.vocis.intelligence.hub.InteractionHub
 import com.vocis.sensor.normalizer.EventNormalizer
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -24,15 +26,17 @@ class CallScreeningSensor : CallScreeningService() {
 
         serviceScope.launch {
             val event = EventNormalizer.normalizeIncomingCall(handleUri, presentation)
-            
-            // Execute within strict fail-open timeout budget
-            val decision = withTimeoutOrNull(SCREENING_TIMEOUT_MS) {
-                // Future integration hook: query Role B Policy Engine when present
-                // Fail-open default: ALLOW call
-                false
-            } ?: false // Timeout fallback: false (fail-open)
+            val hub = InteractionHub.getInstance(applicationContext)
 
-            val response = if (decision) {
+            // Execute within strict fail-open timeout budget
+            val interaction = withTimeoutOrNull(SCREENING_TIMEOUT_MS) {
+                hub.processEvent(event)
+            }
+
+            val shouldBlock = interaction?.isBlocked == true ||
+                    interaction?.protectionDecision == ProtectionAction.BLOCK_CALL
+
+            val response = if (shouldBlock) {
                 CallResponse.Builder()
                     .setDisallowCall(true)
                     .setRejectCall(true)

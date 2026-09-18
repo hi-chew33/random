@@ -53,14 +53,13 @@ object EventNormalizer {
                 body.contains("verify", ignoreCase = true) ||
                 body.contains("blocked", ignoreCase = true) ||
                 body.contains("urgent", ignoreCase = true)
-        val metadataJson = """{"sender":"$sender","length":${body.length},"hasUrgentKeyword":$isSuspect}"""
         return SecurityEvent(
             id = UUID.randomUUID().toString(),
             type = EventType.SMS_RECEIVED,
             source = "SmsSensor",
             timestamp = timestampMs,
             identity = sender,
-            metadata = metadataJson,
+            metadata = body,
             initialRisk = if (isSuspect) "ELEVATED" else "LOW"
         )
     }

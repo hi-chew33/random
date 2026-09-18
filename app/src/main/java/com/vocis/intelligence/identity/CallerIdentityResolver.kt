@@ -7,7 +7,7 @@ import com.vocis.core.data.entity.CallerIdentityEntity
 
 // ── Domain model returned to callers ─────────────────────────────────────────
 
-enum class ReputationLevel { TRUSTED, SAFE, UNKNOWN, SUSPICIOUS, HIGH_RISK }
+enum class ReputationLevel { TRUSTED, SAFE, NEUTRAL, UNKNOWN, SUSPICIOUS, HIGH_RISK }
 
 data class CallerIdentity(
     val e164Number: String,
@@ -17,7 +17,27 @@ data class CallerIdentity(
     val source: String,               // "CONTACT" | "CACHE" | "PROVIDER" | "UNKNOWN"
     val spamReports: Int = 0,
     val fraudReports: Int = 0
-)
+) {
+    val phoneNumber: String get() = e164Number
+
+    constructor(
+        phoneNumber: String,
+        displayName: String?,
+        reputationLevel: ReputationLevel,
+        isKnownContact: Boolean,
+        source: String,
+        spamReports: Int = 0,
+        fraudReports: Int = 0
+    ) : this(
+        e164Number = phoneNumber,
+        displayName = displayName,
+        reputationLevel = reputationLevel,
+        isKnownContact = isKnownContact,
+        source = source,
+        spamReports = spamReports,
+        fraudReports = fraudReports
+    )
+}
 
 // ── Risk contribution from identity (used by EvidenceFusionEngine) ─────────
 

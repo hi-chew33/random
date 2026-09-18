@@ -46,23 +46,13 @@ object NotificationNormalizer {
             else -> "LOW"
         }
 
-        val metadataJson = buildString {
-            append("{")
-            append(""""packageName":"$packageName",""")
-            append(""""titleLength":${safeTitle.length},""")
-            append(""""textLength":${safeText.length},""")
-            append(""""isFinancialApp":$isFinancialApp,""")
-            append(""""isRemoteDesktop":$isRemoteDesktop""")
-            append("}")
-        }
-
         return SecurityEvent(
             id = UUID.randomUUID().toString(),
             type = EventType.NOTIFICATION_POSTED,
             source = "NotificationSensor",
             timestamp = timestampMs,
             identity = packageName,
-            metadata = metadataJson,
+            metadata = fullContent,
             initialRisk = initialRisk
         )
     }

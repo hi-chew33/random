@@ -3,6 +3,7 @@ package com.vocis.sensor.notification
 import android.app.Notification
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
+import com.vocis.intelligence.hub.InteractionHub
 import com.vocis.sensor.normalizer.NotificationNormalizer
 
 class NotificationSensor : NotificationListenerService() {
@@ -28,7 +29,7 @@ class NotificationSensor : NotificationListenerService() {
             subText = subText,
             timestampMs = sbn.postTime
         )
-        // Dispatched to InteractionHub when Role B connects it
+        InteractionHub.getInstance(applicationContext).processEventAsync(event)
     }
 
     override fun onNotificationRemoved(sbn: StatusBarNotification?) {

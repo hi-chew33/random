@@ -229,4 +229,39 @@ class InteractionHub(
         val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US)
         return sdf.format(Date(timestampMs))
     }
+
+    companion object {
+        @Volatile
+        private var instance: InteractionHub? = null
+
+        fun getInstance(context: android.content.Context): InteractionHub {
+            return instance ?: synchronized(this) {
+                instance ?: createDefault(context.applicationContext).also { instance = it }
+            }
+        }
+
+        fun setInstance(hub: InteractionHub) {
+            instance = hub
+        }
+
+        private fun createDefault(context: android.content.Context): InteractionHub {
+            val db = AppDatabase.getInstance(context)
+            val identityResolver = CallerIdentityResolver(
+                context = context,
+                dao = db.callerIdentityDao()
+            )
+            val contextEngine = AttackContextEngine(dao = db.attackContextDao())
+            val incidentManager = SecurityIncidentManager(dao = db.securityIncidentDao())
+            val policyEngine = ProtectionPolicyEngine(dao = db.protectionPolicyDao())
+            return InteractionHub(
+                db = db,
+                identityResolver = identityResolver,
+                contextEngine = contextEngine,
+                fusionEngine = EvidenceFusionEngine(),
+                policyEngine = policyEngine,
+                incidentManager = incidentManager
+            )
+        }
+    }
 }
+
