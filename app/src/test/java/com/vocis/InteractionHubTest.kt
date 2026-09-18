@@ -29,11 +29,11 @@ class InteractionHubTest {
     private lateinit var incidentManager: SecurityIncidentManager
 
     private val mockProvider = object : CallerReputationProvider {
-        override suspend fun lookup(e164: String): CallerReputation {
+        override suspend fun lookup(e164: String): CallerIdentity {
             return if (e164 == "+919999999999") {
-                CallerReputation(ReputationLevel.HIGH_RISK, 50, 20)
+                CallerIdentity(e164, null, ReputationLevel.HIGH_RISK, false, "PROVIDER", 50, 20)
             } else {
-                CallerReputation(ReputationLevel.UNKNOWN, 0, 0)
+                CallerIdentity(e164, null, ReputationLevel.UNKNOWN, false, "PROVIDER", 0, 0)
             }
         }
     }
@@ -93,7 +93,7 @@ class InteractionHubTest {
             context = null,
             dao = null,
             reputationProvider = object : CallerReputationProvider {
-                override suspend fun lookup(e164: String): CallerReputation {
+                override suspend fun lookup(e164: String): CallerIdentity {
                     throw RuntimeException("Simulated backend crash")
                 }
             }

@@ -16,6 +16,7 @@ import com.vocis.intelligence.linguistic.LocalScamClassifier
 import com.vocis.intelligence.linguistic.NotificationSignalExtractor
 import com.vocis.intelligence.linguistic.ScamClassification
 import com.vocis.intelligence.linguistic.SmsSignalExtractor
+import com.vocis.emergency.FamilyAlertDispatcher
 import com.vocis.intelligence.incident.SecurityIncidentManager
 import com.vocis.intelligence.policy.ProtectionPolicyEngine
 import com.vocis.intelligence.risk.EvidenceFusionEngine
@@ -39,6 +40,7 @@ class InteractionHub(
     private val fusionEngine: EvidenceFusionEngine = EvidenceFusionEngine(),
     private val policyEngine: ProtectionPolicyEngine = ProtectionPolicyEngine(db?.protectionPolicyDao()),
     private val incidentManager: SecurityIncidentManager = SecurityIncidentManager(db?.securityIncidentDao()),
+    private val familyAlertDispatcher: FamilyAlertDispatcher = FamilyAlertDispatcher(db?.familyContactDao()),
     private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 ) {
     private val _interactions = MutableStateFlow<List<InteractionEntity>>(emptyList())
@@ -152,6 +154,18 @@ class InteractionHub(
                 callerIdentity = identity,
                 evidenceFactors = assessment.factors
             )
+        }
+
+        // Phase 14: Emergency Family Alert Dispatcher strictly on score > 50
+        if (assessment.score > 50) {
+            scope.launch {
+                familyAlertDispatcher.sendAlert(
+                    riskScore = assessment.score,
+                    incidentType = incidentType,
+                    callerNumber = identity.phoneNumber,
+                    interactionId = interactionId
+                )
+            }
         }
 
         // 7. Assemble Interaction Entity

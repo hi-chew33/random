@@ -10,7 +10,7 @@ import com.vocis.core.data.entity.CallerIdentityEntity
 enum class ReputationLevel { TRUSTED, SAFE, NEUTRAL, UNKNOWN, SUSPICIOUS, HIGH_RISK }
 
 data class CallerIdentity(
-    val e164Number: String,
+    val phoneNumber: String,
     val displayName: String?,
     val reputationLevel: ReputationLevel,
     val isKnownContact: Boolean,
@@ -18,25 +18,7 @@ data class CallerIdentity(
     val spamReports: Int = 0,
     val fraudReports: Int = 0
 ) {
-    val phoneNumber: String get() = e164Number
-
-    constructor(
-        phoneNumber: String,
-        displayName: String?,
-        reputationLevel: ReputationLevel,
-        isKnownContact: Boolean,
-        source: String,
-        spamReports: Int = 0,
-        fraudReports: Int = 0
-    ) : this(
-        e164Number = phoneNumber,
-        displayName = displayName,
-        reputationLevel = reputationLevel,
-        isKnownContact = isKnownContact,
-        source = source,
-        spamReports = spamReports,
-        fraudReports = fraudReports
-    )
+    val e164Number: String get() = phoneNumber
 }
 
 // ── Risk contribution from identity (used by EvidenceFusionEngine) ─────────
@@ -59,7 +41,7 @@ interface CallerReputationProvider {
 // ponytail: mock impl, upgrade to real REST adapter when commercial API contract confirmed
 object MockReputationProvider : CallerReputationProvider {
     override suspend fun lookup(e164: String) = CallerIdentity(
-        e164Number = e164,
+        phoneNumber = e164,
         displayName = null,
         reputationLevel = ReputationLevel.UNKNOWN,
         isKnownContact = false,
@@ -86,21 +68,24 @@ object E164Normalizer {
 
 private const val CACHE_TTL_MS = 24 * 60 * 60 * 1000L   // 24 h
 
+typealias CallerReputation = CallerIdentity
+
 class CallerIdentityResolver(
-    private val context: Context,
-    private val dao: CallerIdentityDao,
-    private val provider: CallerReputationProvider = MockReputationProvider
+    private val context: Context? = null,
+    private val dao: CallerIdentityDao? = null,
+    private val reputationProvider: CallerReputationProvider = MockReputationProvider
 ) {
+    val provider: CallerReputationProvider get() = reputationProvider
 
     suspend fun resolve(rawNumber: String?): CallerIdentity {
         val e164 = E164Normalizer.normalize(rawNumber)
         if (e164 == "UNKNOWN") return unknownIdentity()
 
         // 1. ContactsProvider — fastest path
-        val contactName = queryContacts(e164)
+        val contactName = context?.let { queryContacts(it, e164) }
         if (contactName != null) {
             val identity = CallerIdentity(
-                e164Number = e164,
+                phoneNumber = e164,
                 displayName = contactName,
                 reputationLevel = ReputationLevel.TRUSTED,
                 isKnownContact = true,
@@ -111,7 +96,7 @@ class CallerIdentityResolver(
         }
 
         // 2. Local cache
-        val cached = dao.getByPhoneNumber(e164)
+        val cached = dao?.getByPhoneNumber(e164)
         if (cached != null && System.currentTimeMillis() - cached.lastUpdated < CACHE_TTL_MS) {
             return cached.toDomain()
         }
@@ -122,20 +107,24 @@ class CallerIdentityResolver(
         return identity
     }
 
-    private fun queryContacts(e164: String): String? {
-        val uri = ContactsContract.PhoneLookup.CONTENT_FILTER_URI.buildUpon()
-            .appendPath(e164).build()
-        return context.contentResolver.query(
-            uri, arrayOf(ContactsContract.PhoneLookup.DISPLAY_NAME), null, null, null
-        )?.use { cursor ->
-            if (cursor.moveToFirst())
-                cursor.getString(cursor.getColumnIndexOrThrow(ContactsContract.PhoneLookup.DISPLAY_NAME))
-            else null
+    private fun queryContacts(ctx: Context, e164: String): String? {
+        return try {
+            val uri = ContactsContract.PhoneLookup.CONTENT_FILTER_URI.buildUpon()
+                .appendPath(e164).build()
+            ctx.contentResolver?.query(
+                uri, arrayOf(ContactsContract.PhoneLookup.DISPLAY_NAME), null, null, null
+            )?.use { cursor ->
+                if (cursor.moveToFirst())
+                    cursor.getString(cursor.getColumnIndexOrThrow(ContactsContract.PhoneLookup.DISPLAY_NAME))
+                else null
+            }
+        } catch (e: Exception) {
+            null
         }
     }
 
     private suspend fun cacheIdentity(identity: CallerIdentity) {
-        dao.insert(CallerIdentityEntity(
+        dao?.insert(CallerIdentityEntity(
             phoneNumber = identity.e164Number,
             displayName = identity.displayName,
             category = identity.reputationLevel.name,
@@ -148,7 +137,7 @@ class CallerIdentityResolver(
     }
 
     private fun unknownIdentity() = CallerIdentity(
-        e164Number = "UNKNOWN",
+        phoneNumber = "UNKNOWN",
         displayName = null,
         reputationLevel = ReputationLevel.UNKNOWN,
         isKnownContact = false,
@@ -157,7 +146,7 @@ class CallerIdentityResolver(
 }
 
 private fun CallerIdentityEntity.toDomain() = CallerIdentity(
-    e164Number = phoneNumber,
+    phoneNumber = phoneNumber,
     displayName = displayName,
     reputationLevel = runCatching { ReputationLevel.valueOf(reputationLevel) }
         .getOrDefault(ReputationLevel.UNKNOWN),

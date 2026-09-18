@@ -106,6 +106,14 @@
             android:foregroundServiceType="phoneCall|microphone"
             android:exported="false" />
 
+        <!-- Phase 14: Keyguard-Bypassing Emergency SOS Alert Activity -->
+        <activity
+            android:name=".emergency.EmergencyAlertActivity"
+            android:exported="false"
+            android:showWhenLocked="true"
+            android:turnScreenOn="true"
+            android:theme="@android:style/Theme.Material.NoActionBar.Fullscreen" />
+
     </application>
 
 </manifest>
