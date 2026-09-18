@@ -2,6 +2,7 @@ package com.vocis.intelligence.risk
 
 import com.vocis.core.domain.model.RiskLevel
 import com.vocis.intelligence.context.AttackContext
+import com.vocis.intelligence.context.ContextType
 import com.vocis.intelligence.identity.CallerIdentity
 import com.vocis.intelligence.identity.ReputationLevel
 import com.vocis.intelligence.identity.baseRiskWeight
@@ -89,7 +90,38 @@ class EvidenceFusionEngine {
             )
         }
 
-        // 6. Linguistic scam / urgency classification
+        // 6. Callback number mismatch (TriNetra Attack Context)
+        if (context.hasCallbackMismatch) {
+            factors.add(
+                EvidenceFactor(
+                    source = "CALLBACK_MISMATCH",
+                    weight = 30,
+                    description = "Suspicious callback mismatch: SMS advertised callback ${context.callbackNumber} but incoming caller is ${context.activeCallPhoneNumber}"
+                )
+            )
+        }
+
+        // 7. Composite Correlated Attack Context (TriNetra AttackContextEngine)
+        if (context.contextType != ContextType.UNKNOWN && context.contextType != ContextType.OTP_THEFT && context.contextType != ContextType.REMOTE_ACCESS_SCAM) {
+            val weight = when (context.contextType) {
+                ContextType.GOVERNMENT_IMPERSONATION -> 50
+                ContextType.PARCEL_SCAM -> 35
+                ContextType.TELECOM_IMPERSONATION -> 35
+                ContextType.UTILITY_SCAM -> 30
+                ContextType.FINANCIAL_FRAUD -> 25
+                ContextType.SOCIAL_ENGINEERING -> 25
+                else -> 20
+            }
+            factors.add(
+                EvidenceFactor(
+                    source = "CORRELATED_CONTEXT_${context.contextType.name}",
+                    weight = weight,
+                    description = "Correlated 5-min multi-event threat: ${context.explanation}"
+                )
+            )
+        }
+
+        // 8. Linguistic scam / urgency classification
         scamClassification?.let { scam ->
             if (scam.isScam) {
                 val weight = if (scam.scamScore >= 80) 40 else 20
@@ -112,7 +144,7 @@ class EvidenceFusionEngine {
             }
         }
 
-        // 7. Voice Clone verdict from Role C
+        // 9. Voice Clone verdict from TriNetra VCD
         if (isVoiceCloneCritical) {
             factors.add(
                 EvidenceFactor(

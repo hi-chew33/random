@@ -5,19 +5,25 @@ import com.vocis.vcd.domain.VcdVerdict
 import com.vocis.vcd.domain.VcdVerificationResult
 
 /**
- * Executes the dual-score 2D decision matrix.
+ * Executes the dual-score 2D decision matrix matching TriNetra Fusion.kt.
  *
  * CRITICAL ARCHITECTURAL INVARIANT:
  * Speaker similarity and synthetic probability are NEVER arithmetically averaged.
  * High similarity + High synthetic probability = CRITICAL Clone Signature.
  *
+ * CALIBRATION & SATURATION SUPPRESSION (TriNetra Fusion.kt:114-128):
+ * If the speaker's own authentic voice or microphone chain reads near the ceiling
+ * (baselineSynthetic + margin >= 1.0), the anti-spoof model cannot distinguish
+ * them from a clone. In this state (isReliable = false / UNRELIABLE), the spoof
+ * check carries no information. To prevent false accusations against authentic
+ * humans, the spoof score is dropped. If identity matches (similarity >= matchThreshold),
+ * the verdict is SAFE_VERIFIED_AUTHENTIC.
+ *
  * AASIST RELIABILITY GATE:
- * AASIST was trained exclusively on English ASVspoof-2019 data. When the caller
- * speaks a non-English language (Hindi, Hinglish, Tamil, etc.) or the audio is
- * heavily codec-compressed (Opus/OGG < 20 kbps), the model produces extreme
- * out-of-distribution logits that are meaningless as spoof signals.
- * When [isAasistReliable] = false, the synthetic score is ignored and the verdict
- * is driven by speaker similarity alone (or marked UNCERTAIN if no voiceprint).
+ * AASIST was trained exclusively on English ASVspoof-2019 clean studio data. When
+ * non-English audio or out-of-distribution codec compression is detected, synthetic
+ * logits are untrustworthy. When [isAasistReliable] = false, synthetic scores are
+ * suppressed and decisions rely on speaker similarity and semantic intelligence.
  */
 class BiometricFusionEngine(
     val speakerMatchThreshold: Float = VcdConstants.SPEAKER_MATCH_THRESHOLD,
@@ -31,10 +37,8 @@ class BiometricFusionEngine(
      * @param syntheticProbability Synthetic speech probability from AASIST [0.0, 1.0].
      * @param dynamicThreshold     Line-noise calibrated threshold from BaselineCalibrator.
      * @param baselineSynthetic    Baseline AASIST score measured on enrolled clip.
-     * @param isReliable           False when carrier line noise exceeds saturation limit.
-     * @param isAasistReliable     False when AASIST score is untrustworthy (non-English audio,
-     *                             extreme codec compression, or out-of-distribution input).
-     *                             When false, the synthetic score is suppressed from the decision.
+     * @param isReliable           False when baseline saturation (baseline + margin >= 1.0) occurs.
+     * @param isAasistReliable     False when non-English speech or severe compression renders AASIST noisy.
      */
     fun evaluate(
         similarity: Float,
@@ -45,32 +49,20 @@ class BiometricFusionEngine(
         isAasistReliable: Boolean = true
     ): VcdVerificationResult {
 
-        // Line noise saturation check — hardware/carrier issue, not voice
-        if (!isReliable) {
-            return VcdVerificationResult(
-                verdict = VcdVerdict.UNRELIABLE_LINE_SATURATED,
-                similarity = similarity,
-                syntheticProbability = syntheticProbability,
-                dynamicThreshold = dynamicThreshold,
-                baselineSynthetic = baselineSynthetic,
-                isReliable = false
-            )
-        }
-
         val isHighSimilarity = similarity >= speakerMatchThreshold
         val isLowSimilarity  = similarity < speakerMismatchThreshold
 
-        // ── AASIST unreliable path (non-English / heavily compressed audio) ──────────
-        // Drop the synthetic score entirely; decide on similarity only.
-        if (!isAasistReliable) {
+        // ── Saturation / Calibration Unreliable Gate (TriNetra Fusion.kt:76-77) ─────
+        // Baseline measured at or near the ceiling means the detector called the user's
+        // own genuine recording synthetic. Suppress the false clone finding.
+        if (!isReliable || !isAasistReliable) {
             val verdict = when {
-                // Matches an enrolled contact — treat as potentially authentic; flag for
-                // human review rather than hard-blocking (LLM semantic layer handles scam).
+                // Identity matches authentic enrolled voice -> SAFE
                 isHighSimilarity -> VcdVerdict.SAFE_VERIFIED_AUTHENTIC
-                // Very different from enrolled contact — suspicious but not confirmed synthetic
+                // Mismatch on identity -> SUSPICIOUS IMPOSTOR
                 isLowSimilarity  -> VcdVerdict.SUSPICIOUS_IMPOSTOR
-                // Middle range with no spoof signal — cannot decide
-                else             -> VcdVerdict.UNCERTAIN
+                // Unenrolled or borderline -> UNRELIABLE_LINE_SATURATED / UNCERTAIN
+                else             -> if (!isReliable) VcdVerdict.UNRELIABLE_LINE_SATURATED else VcdVerdict.UNCERTAIN
             }
             return VcdVerificationResult(
                 verdict = verdict,
@@ -78,11 +70,11 @@ class BiometricFusionEngine(
                 syntheticProbability = syntheticProbability,
                 dynamicThreshold = dynamicThreshold,
                 baselineSynthetic = baselineSynthetic,
-                isReliable = true
+                isReliable = isReliable && isAasistReliable
             )
         }
 
-        // ── Normal path: AASIST score is trustworthy ─────────────────────────────────
+        // ── Normal path: AASIST score is calibrated and reliable ─────────────────────
         val isHighSynthetic = syntheticProbability >= dynamicThreshold
 
         val verdict = when {
@@ -92,13 +84,13 @@ class BiometricFusionEngine(
             // High similarity + Low synthetic probability -> Genuine trusted contact
             isHighSimilarity && !isHighSynthetic -> VcdVerdict.SAFE_VERIFIED_AUTHENTIC
 
-            // High synthetic probability with low or uncalibrated similarity -> Unknown AI voice
+            // High synthetic probability from unknown or mismatched speaker -> AI generated voice
             isHighSynthetic                      -> VcdVerdict.CRITICAL_UNKNOWN_SYNTHETIC
 
             // Low similarity + Low synthetic probability -> Wrong person, but natural human
             isLowSimilarity && !isHighSynthetic  -> VcdVerdict.SUSPICIOUS_IMPOSTOR
 
-            // Intermediate similarity (0.50 <= sim < 0.75) with natural human voice
+            // Intermediate similarity with natural human voice
             else                                 -> VcdVerdict.UNCERTAIN
         }
 

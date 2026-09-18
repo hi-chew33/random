@@ -1,5 +1,7 @@
 package com.vocis.speech
 
+import com.vocis.intelligence.context.AttackContext
+import com.vocis.intelligence.context.AttackContextEngine
 import com.vocis.speech.asr.SpeechRecognizerBridge
 import com.vocis.speech.llm.LiveSemanticAnalyzer
 import com.vocis.speech.llm.ScamCategory
@@ -23,17 +25,20 @@ data class LiveCallIntelligenceState(
     val latestSemanticAnalysis: SemanticAnalysisResult? = null,
     val isCriticalVoiceClone: Boolean = false,
     val isScamLureDetected: Boolean = false,
-    val sharedSecretQuestion: String? = null
+    val sharedSecretQuestion: String? = null,
+    val attackContext: AttackContext? = null
 )
 
 /**
  * Master coordinator for Role C.
- * Fuses biometric voice verification, offline speech transcription, and semantic threat intelligence.
+ * Fuses biometric voice verification, offline speech transcription, semantic threat intelligence,
+ * and 5-minute cross-channel attack context correlation.
  */
 class LiveCallIntelligenceCoordinator(
     private val asrBridge: SpeechRecognizerBridge,
     private val semanticAnalyzer: LiveSemanticAnalyzer,
-    private val scope: CoroutineScope
+    private val scope: CoroutineScope,
+    private val attackContextEngine: AttackContextEngine? = null
 ) {
 
     private val _state = MutableStateFlow(LiveCallIntelligenceState())
@@ -53,6 +58,14 @@ class LiveCallIntelligenceCoordinator(
             sharedSecretQuestion = enrolledContact?.sharedSecretQuestion
         )
 
+        // Poll or fetch initial active attack context
+        attackContextEngine?.let { ace ->
+            scope.launch {
+                val ctx = ace.getActiveContext()
+                _state.value = _state.value.copy(attackContext = ctx)
+            }
+        }
+
         // 1. Collect speech transcripts
         transcriptJob = scope.launch {
             asrBridge.transcripts.collect { textToken ->
@@ -68,9 +81,11 @@ class LiveCallIntelligenceCoordinator(
         // 2. Collect semantic analyzer results
         analysisJob = scope.launch {
             semanticAnalyzer.analysisResults.collect { analysis ->
+                val currentAttackContext = attackContextEngine?.getActiveContext()
                 _state.value = _state.value.copy(
                     latestSemanticAnalysis = analysis,
-                    isScamLureDetected = analysis.isScam
+                    isScamLureDetected = analysis.isScam,
+                    attackContext = currentAttackContext
                 )
             }
         }
