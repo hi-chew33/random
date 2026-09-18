@@ -5,6 +5,7 @@ import com.vocis.vcd.audio.WindowSlicingEngine
 import com.vocis.vcd.crypto.BiometricCryptoVault
 import com.vocis.vcd.domain.ContactVoiceprint
 import com.vocis.vcd.domain.MathPrimitives
+import com.vocis.vcd.domain.VcdVerdict
 import com.vocis.vcd.domain.VcdVerificationResult
 import com.vocis.vcd.fusion.BaselineCalibrator
 import com.vocis.vcd.fusion.BiometricFusionEngine
@@ -98,6 +99,55 @@ class LiveVerificationPipeline(
             // 6. Dual-score 2D decision fusion
             val result = fusionEngine.evaluate(
                 similarity = smoothedSimilarity,
+                syntheticProbability = smoothedSynthetic,
+                dynamicThreshold = calibStatus.dynamicThreshold,
+                baselineSynthetic = calibStatus.baselineSynthetic,
+                isReliable = calibStatus.isReliable
+            )
+
+            emit(result)
+        }
+    }.flowOn(ioDispatcher)
+
+    /**
+     * Starts continuous live verification for unknown or unenrolled callers.
+     * Evaluates acoustic bonafide vs. synthetic spoof characteristics using AASIST anti-spoof detector,
+     * baseline line noise calibration, and sliding median filter.
+     */
+    fun startUnknownSpeakerVerification(
+        isActive: () -> Boolean
+    ): Flow<VcdVerificationResult> = flow {
+        baselineCalibrator.reset()
+        sessionScores.reset()
+
+        while (isActive()) {
+            val audioWindow = windowSlicingEngine.extractNextWindow(ringBuffer)
+            if (audioWindow == null) {
+                kotlinx.coroutines.delay(50)
+                continue
+            }
+
+            // AASIST anti-spoof inference -> raw synthetic probability
+            val rawSyntheticProb = antiSpoofDetector.detectSpoof(audioWindow)
+
+            // Baseline carrier calibration
+            val calibStatus = baselineCalibrator.ingestScore(rawSyntheticProb)
+
+            // Median filter
+            sessionScores.push(1.0f, rawSyntheticProb)
+            val smoothedSynthetic = sessionScores.medianSynthetic()
+
+            // Decision evaluation for unenrolled voice
+            val verdict = when {
+                !calibStatus.isReliable -> VcdVerdict.UNRELIABLE_LINE_SATURATED
+                smoothedSynthetic >= calibStatus.dynamicThreshold -> VcdVerdict.CRITICAL_UNKNOWN_SYNTHETIC
+                smoothedSynthetic <= 0.35f -> VcdVerdict.SAFE_VERIFIED_AUTHENTIC
+                else -> VcdVerdict.UNCERTAIN
+            }
+
+            val result = VcdVerificationResult(
+                verdict = verdict,
+                similarity = 1.0f,
                 syntheticProbability = smoothedSynthetic,
                 dynamicThreshold = calibStatus.dynamicThreshold,
                 baselineSynthetic = calibStatus.baselineSynthetic,

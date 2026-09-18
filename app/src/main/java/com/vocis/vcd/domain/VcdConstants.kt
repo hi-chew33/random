@@ -17,8 +17,8 @@ object VcdConstants {
     /** Speaker embedding dimension produced by Resemblyzer GE2E */
     const val EMBEDDING_DIM = 256
 
-    /** Minimum RMS energy below which audio window is considered silence */
-    const val RMS_SILENCE_THRESHOLD = 0.01f
+    /** Minimum RMS energy below which audio window is considered silence (adjusted for low-level call audio) */
+    const val RMS_SILENCE_THRESHOLD = 0.0005f
 
     /** Pairwise similarity threshold for voice enrollment validation */
     const val PAIRWISE_SIMILARITY_THRESHOLD = 0.75f

@@ -22,3 +22,10 @@ dependencyResolutionManagement {
 
 rootProject.name = "vocis"
 include(":app")
+
+gradle.beforeProject {
+    if (projectDir.absolutePath.contains("OneDrive", ignoreCase = true)) {
+        val userHome = System.getProperty("user.home").replace("\\", "/")
+        layout.buildDirectory.set(file("$userHome/.gradle_builds/${rootProject.name}/${project.name}"))
+    }
+}

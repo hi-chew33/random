@@ -1,5 +1,7 @@
 package com.vocis.vcd.domain
 
+import kotlin.math.log10
+import kotlin.math.pow
 import kotlin.math.sqrt
 
 /**
@@ -7,6 +9,32 @@ import kotlin.math.sqrt
  * Stateless and highly optimized for real-time execution.
  */
 object MathPrimitives {
+
+    const val TARGET_DBFS = -30f
+
+    /**
+     * Loudness normalisation to -30 dBFS, matching TriNetra and Resemblyzer.
+     * Prevents caller volume from distorting speaker embedding similarities.
+     */
+    fun toTargetDbfs(
+        samples: FloatArray,
+        targetDbfs: Float = TARGET_DBFS,
+        increaseOnly: Boolean = true
+    ): FloatArray {
+        if (samples.isEmpty()) return samples
+
+        var acc = 0.0
+        for (s in samples) acc += s.toDouble() * s
+        val rms = sqrt(acc / samples.size)
+        if (rms < 1e-10) return samples
+
+        val dbfs = 20.0 * log10(rms)
+        val delta = targetDbfs - dbfs
+        if (increaseOnly && delta < 0) return samples
+
+        val gain = 10.0.pow(delta / 20.0).toFloat()
+        return FloatArray(samples.size) { samples[it] * gain }
+    }
 
     /**
      * Calculates L2 norm (Euclidean length) of a float vector.

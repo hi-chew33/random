@@ -5,14 +5,24 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
 import android.os.Build
+import android.util.Log
 import com.vocis.core.data.database.AppDatabase
 import com.vocis.core.data.database.VcdDatabase
 import com.vocis.digitalarrest.DigitalArrestController
 import com.vocis.intelligence.context.AttackContextEngine
 import com.vocis.intelligence.hub.InteractionHub
 import com.vocis.intelligence.identity.CallerIdentityResolver
+import com.vocis.speech.asr.SpeechRecognizerBridge
 import com.vocis.ui.overlay.EmergencyAlertOverlayManager
 import com.vocis.ui.overlay.ProtectionOverlayManager
+import com.vocis.vcd.crypto.BiometricCryptoVault
+import com.vocis.vcd.crypto.KeystoreBiometricCryptoVault
+import com.vocis.vcd.inference.AntiSpoofDetectorModel
+import com.vocis.vcd.inference.AssetModelLoader
+import com.vocis.vcd.inference.SpeakerEncoderModel
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 class VocisApplication : Application() {
 
@@ -32,6 +42,19 @@ class VocisApplication : Application() {
     lateinit var protectionOverlayManager: ProtectionOverlayManager
         private set
     lateinit var emergencyAlertOverlayManager: EmergencyAlertOverlayManager
+        private set
+
+    // Hardware Keystore Biometric Vault
+    val biometricCryptoVault: BiometricCryptoVault = KeystoreBiometricCryptoVault()
+
+    // Neural Model and Speech Recognizer instances
+    var speakerEncoder: SpeakerEncoderModel? = null
+        private set
+    var antiSpoofDetector: AntiSpoofDetectorModel? = null
+        private set
+    var speechRecognizer: SpeechRecognizerBridge? = null
+        private set
+    var isModelLoaded: Boolean = false
         private set
 
     override fun onCreate() {
@@ -55,12 +78,32 @@ class VocisApplication : Application() {
             identityResolver = callerIdentityResolver,
             contextEngine = attackContextEngine
         )
+        InteractionHub.setInstance(interactionHub)
         digitalArrestController = DigitalArrestController()
         protectionOverlayManager = ProtectionOverlayManager(this)
         emergencyAlertOverlayManager = EmergencyAlertOverlayManager(this)
 
         // 3. Register system notification channels
         createNotificationChannels()
+
+        // 4. Preload on-device AI/ML models in background thread
+        preloadModelsAsync()
+    }
+
+    private fun preloadModelsAsync() {
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                Log.i("VocisApp", "Starting background neural model initialization...")
+                val loaded = AssetModelLoader.loadAllModels(this@VocisApplication)
+                speakerEncoder = loaded.speakerEncoder
+                antiSpoofDetector = loaded.antiSpoofDetector
+                speechRecognizer = loaded.speechRecognizer
+                isModelLoaded = true
+                Log.i("VocisApp", "Neural models loaded successfully (speakerEncoder, antiSpoofDetector)")
+            } catch (e: Exception) {
+                Log.w("VocisApp", "Model preloading note: ")
+            }
+        }
     }
 
     private fun createNotificationChannels() {
@@ -97,3 +140,5 @@ class VocisApplication : Application() {
             private set
     }
 }
+
+

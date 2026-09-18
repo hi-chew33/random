@@ -54,13 +54,13 @@ class BiometricFusionEngine(
             // High similarity + Low synthetic probability -> Genuine trusted contact
             isHighSimilarity && !isHighSynthetic -> VcdVerdict.SAFE_VERIFIED_AUTHENTIC
 
+            // High synthetic probability with low or uncalibrated similarity -> Critical Synthetic Voice
+            isHighSynthetic -> VcdVerdict.CRITICAL_UNKNOWN_SYNTHETIC
+
             // Low similarity + Low synthetic probability -> Wrong person, but natural human
             isLowSimilarity && !isHighSynthetic -> VcdVerdict.SUSPICIOUS_IMPOSTOR
 
-            // Low similarity + High synthetic probability -> Synthetic audio from unknown source
-            isLowSimilarity && isHighSynthetic -> VcdVerdict.CRITICAL_UNKNOWN_SYNTHETIC
-
-            // Intermediate similarity (0.50 <= sim < 0.75)
+            // Intermediate similarity (0.50 <= sim < 0.75) with natural human voice
             else -> VcdVerdict.UNCERTAIN
         }
 

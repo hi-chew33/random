@@ -11,7 +11,11 @@ import java.nio.FloatBuffer
  * Production ONNX Runtime implementation of AASIST audio anti-spoofing detector.
  *
  * Input node: [1, 64600] float32 tensor representing 16kHz linear audio PCM.
- * Output node: [1, 2] logits [bonafide, spoof].
+ * Output node: [1, 2] logits [spoof, bonafide].
+ *
+ * Output matches upstream AASIST code and TriNetra reference:
+ * logits ordered [spoof, bonafide], index 1 is the bonafide score,
+ * so synthetic_probability is softmax(logits)[0].
  */
 class OnnxAasistDetector(
     private val session: OrtSession,
@@ -51,8 +55,10 @@ class OnnxAasistDetector(
                 }
 
                 val probs = MathPrimitives.softmax2(logits)
-                // probs[0] = bonafide, probs[1] = spoof / synthetic
-                return probs[1]
+                // AASIST logit order is [spoof, bonafide] (see TriNetra OrtModels.kt line 132 & upstream AASIST).
+                // probs[0] = spoof / synthetic probability
+                // probs[1] = bonafide natural human probability
+                return probs[0]
             }
         }
     }
@@ -64,16 +70,66 @@ class OnnxAasistDetector(
 
 /**
  * Production ONNX Runtime implementation of Resemblyzer GE2E speaker encoder.
- * Produces 256-dimensional L2-normalized embeddings.
+ * Accepts any duration by decomposing into 25,600-sample partials (1.6s) with 50% overlap,
+ * normalises loudness to -30 dBFS matching reference pipeline,
+ * and produces a 256-dimensional L2-normalized unit centroid embedding.
  */
 class OnnxSpeakerEncoder(
     private val session: OrtSession,
     private val env: OrtEnvironment = OrtEnvironment.getEnvironment()
 ) : SpeakerEncoderModel, AutoCloseable {
 
+    companion object {
+        private const val PARTIAL_WIDTH = 25600
+        private const val PARTIAL_HOP = 12800
+    }
+
     override fun embed(audioWindow: FloatArray): FloatArray {
-        val shape = longArrayOf(1, audioWindow.size.toLong())
-        val floatBuffer = FloatBuffer.wrap(audioWindow)
+        if (audioWindow.isEmpty()) return FloatArray(VcdConstants.EMBEDDING_DIM)
+
+        // Normalise over the whole utterance before splitting, exactly as TriNetra & Resemblyzer do
+        val normalized = MathPrimitives.toTargetDbfs(audioWindow)
+
+        if (normalized.size < PARTIAL_WIDTH) {
+            val padded = FloatArray(PARTIAL_WIDTH)
+            System.arraycopy(normalized, 0, padded, 0, normalized.size)
+            return embedSinglePartial(padded)
+        }
+
+        val partials = mutableListOf<FloatArray>()
+        var start = 0
+        while (start + PARTIAL_WIDTH <= normalized.size) {
+            val chunk = normalized.copyOfRange(start, start + PARTIAL_WIDTH)
+            partials.add(embedSinglePartial(chunk))
+            start += PARTIAL_HOP
+        }
+
+        if (start - PARTIAL_HOP + PARTIAL_WIDTH < normalized.size) {
+            val chunk = normalized.copyOfRange(normalized.size - PARTIAL_WIDTH, normalized.size)
+            partials.add(embedSinglePartial(chunk))
+        }
+
+        if (partials.isEmpty()) {
+            return embedSinglePartial(normalized.copyOf(PARTIAL_WIDTH))
+        }
+
+        val meanVector = FloatArray(VcdConstants.EMBEDDING_DIM)
+        for (p in partials) {
+            for (i in 0 until VcdConstants.EMBEDDING_DIM) {
+                meanVector[i] += p[i]
+            }
+        }
+        val count = partials.size.toFloat()
+        for (i in 0 until VcdConstants.EMBEDDING_DIM) {
+            meanVector[i] /= count
+        }
+
+        return MathPrimitives.l2Normalize(meanVector)
+    }
+
+    private fun embedSinglePartial(partial: FloatArray): FloatArray {
+        val shape = longArrayOf(1, PARTIAL_WIDTH.toLong())
+        val floatBuffer = FloatBuffer.wrap(partial)
         val tensor = OnnxTensor.createTensor(env, floatBuffer, shape)
 
         tensor.use { inputTensor ->
