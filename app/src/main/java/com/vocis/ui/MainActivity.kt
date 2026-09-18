@@ -20,6 +20,7 @@ import com.vocis.digitalarrest.DigitalArrestActivity
 import com.vocis.emergency.EmergencyAlertActivity
 import com.vocis.ui.screens.BiometricShell
 import com.vocis.ui.screens.OnboardingScreen
+import com.vocis.ui.screens.SplashScreen
 import com.vocis.ui.theme.VocisTheme
 
 class MainActivity : ComponentActivity() {
@@ -65,9 +66,14 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             VocisTheme {
+                var showSplash by remember { mutableStateOf(true) }
                 var currentOnboarding by remember { mutableStateOf(showOnboarding) }
 
-                if (currentOnboarding) {
+                if (showSplash) {
+                    SplashScreen(
+                        onSplashFinished = { showSplash = false }
+                    )
+                } else if (currentOnboarding) {
                     OnboardingScreen(
                         onRequestPermissions = {
                             requestRequiredPermissions()
