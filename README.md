@@ -1,4 +1,4 @@
-mermaid```
+```mermaid
 flowchart TB
     subgraph SENSORS["Operating System Sensors & Inputs"]
         CS["Call Screening Service<br/>(Telephony Ingestion)"]
