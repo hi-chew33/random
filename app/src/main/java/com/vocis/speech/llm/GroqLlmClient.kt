@@ -1,5 +1,6 @@
 package com.vocis.speech.llm
 
+import com.vocis.BuildConfig
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
@@ -16,7 +17,11 @@ import java.util.concurrent.TimeUnit
  * Cloud LLM client interfacing with Groq API (llama-3.1-8b-instant).
  */
 class GroqLlmClient(
-    private val apiKey: String? = null,
+    private val apiKey: String? = try {
+        BuildConfig.GROQ_API_KEY.ifBlank { null }
+    } catch (e: Throwable) {
+        null
+    },
     private val httpClient: OkHttpClient = OkHttpClient.Builder()
         .connectTimeout(3, TimeUnit.SECONDS)
         .readTimeout(4, TimeUnit.SECONDS)
