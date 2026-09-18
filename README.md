@@ -252,35 +252,6 @@ flowchart TB
 
 ---
 
-## Phased Implementation Roadmap
-
-VOCIS was engineered using a clean, dependency-ordered, three-role collaborative rebuild architecture:
-
-| Phase | Description | Key Components | Implementation Role |
-|:---:|---|---|:---:|
-| **1** | Build System & Android Toolchain | Gradle 8.7, Version Catalogs, ABI filters, 18 permissions | **Role A (Completed)** |
-| **2** | Core Domain Entities & Math | Enums (`RiskLevel`, `ProtectionAction`), `VectorMath` (L2, Cosine Sim) | **Role A (Completed)** |
-| **3** | Dual Database Persistence | `app.db` (9 tables) + `vcd.db` (2 tables), DAOs, TypeConverters | **Role A (Completed)** |
-| **4** | Hardware Keystore Vault | `BiometricCryptoVault` (AES-256 GCM on AndroidKeyStore) | **Role A (Completed)** |
-| **5** | Ingestion & Normalization | `EventNormalizer`, `NotificationNormalizer` pure functions | **Role A (Completed)** |
-| **6** | Caller Identity Resolution | `CallerIdentityResolver` (E.164 normalization, contact lookup) | **Role B (Completed)** |
-| **7** | Static & Linguistic Intelligence | `LinguisticScamAnalyzer` (60+ pattern rules, regex classifiers) | **Role B (Completed)** |
-| **8** | Multi-Modal Attack Correlation | `AttackContextEngine` (5-minute sliding temporal buffer) | **Role B (Completed)** |
-| **9** | Evidence Fusion & Risk Scoring | `EvidenceFusionEngine` & `RiskEngine` (0-100 Bayesian scoring) | **Role B (Completed)** |
-| **10** | Protection Policy Engine | `ProtectionPolicyEngine` (Whitelisting, auto-block, intervention) | **Role B (Completed)** |
-| **11** | Incident Management Subsystem | `SecurityIncidentManager` (15-min deduplication, state transitions) | **Role B (Completed)** |
-| **12** | Central Interaction Hub | `InteractionHub` (Pipeline orchestrator, StateFlow telemetry) | **Role B (Completed)** |
-| **13** | Platform Sensors & Fail-Open Hub | `CallScreeningSensor` ($\le 1800$ms timeout), SMS/Notif sensors | **Role A (Completed)** |
-| **14** | Emergency Alerts & SOS Siren | `EmergencyAlarmSystem` (85% volume loop), `FamilyAlertDispatcher` | **Role B (Completed)** |
-| **15** | Digital Arrest Defense & PDF | `DigitalArrestController` (10-phase state machine, SHA-256 PDF) | **Role B (Completed)** |
-| **16** | Biometric Voice Clone Defence | ONNX AASIST + Resemblyzer inference, baseline calibration | **Role C (Completed)** |
-| **17** | WebRTC VoIP & Local Discovery | mDNS peer discovery, TCP signaling, WebRTC audio tapping | **Role C (Completed)** |
-| **18** | Offline ASR & Cloud LLM Bridge | Vosk Kaldi offline STT, Groq LPU LLM client, live coordinator | **Role C (Completed)** |
-| **19** | Presentation & System Overlays | Jetpack Compose UI, In-Call HUD (`TYPE_APPLICATION_OVERLAY`) | In Progress |
-| **20** | Application Startup & Wiring | `VocisApplication`, `MainActivity`, permissions orchestrator | In Progress |
-| **21** | End-to-End System Verification | Full device integration and stress testing | In Progress |
-
----
 
 ## Security & Privacy Model
 
