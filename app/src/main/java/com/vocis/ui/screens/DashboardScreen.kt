@@ -111,15 +111,18 @@ fun DashboardScreen(
                             )
                         }
 
-                        // Status pill badge with checkmark
+                        // Official Logo Emblem Badge
                         Box(
                             modifier = Modifier
-                                .size(42.dp)
-                                .clip(CircleShape)
-                                .background(Color.White.copy(alpha = 0.2f)),
+                                .size(48.dp)
+                                .clip(RoundedCornerShape(14.dp))
+                                .background(Color.White.copy(alpha = 0.22f)),
                             contentAlignment = Alignment.Center
                         ) {
-                            Text(text = "✓", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                            com.vocis.ui.components.VocisLogoEmblem(
+                                modifier = Modifier.size(32.dp),
+                                color = Color.White
+                            )
                         }
                     }
 

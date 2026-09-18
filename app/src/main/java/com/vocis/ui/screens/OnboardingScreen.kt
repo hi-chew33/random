@@ -40,6 +40,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.vocis.ui.components.VocisLogoBadge
 import com.vocis.ui.theme.VocisBorder
 import com.vocis.ui.theme.VocisCardWhite
 import com.vocis.ui.theme.VocisCream
@@ -89,25 +90,13 @@ fun OnboardingWelcomeView(onGetStarted: () -> Unit) {
             contentAlignment = Alignment.Center
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                // Diamond emblem rotated 45 deg
-                Box(
-                    modifier = Modifier
-                        .size(80.dp)
-                        .rotate(45f)
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(VocisGreen)
-                        .border(3.dp, Color.White, RoundedCornerShape(16.dp)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(24.dp)
-                            .clip(CircleShape)
-                            .background(Color.White)
-                    )
-                }
+                // Official VOCIS Diamond Emblem
+                VocisLogoBadge(
+                    size = 90.dp,
+                    withBackground = true
+                )
 
-                Spacer(modifier = Modifier.height(28.dp))
+                Spacer(modifier = Modifier.height(24.dp))
 
                 Text(
                     text = "VOCIS SHIELD",
