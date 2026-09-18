@@ -3,6 +3,7 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.ksp)
     alias(libs.plugins.compose.compiler)
+    alias(libs.plugins.kotlin.serialization)
 }
 
 android {
@@ -82,6 +83,13 @@ dependencies {
 
     // Coroutines
     implementation(libs.kotlinx.coroutines.android)
+
+    // Role C Real-Time & ML dependencies
+    implementation(libs.onnxruntime.android)
+    implementation(libs.stream.webrtc.android)
+    implementation(libs.vosk.android)
+    implementation(libs.okhttp)
+    implementation(libs.kotlinx.serialization.json)
 
     // Testing
     testImplementation(libs.junit)
