@@ -5,13 +5,13 @@ import com.vocis.vcd.domain.VcdVerdict
 import com.vocis.vcd.domain.VcdVerificationResult
 
 /**
- * Executes the dual-score 2D decision matrix matching TriNetra Fusion.kt.
+ * Executes the dual-score 2D decision matrix matching VOCIS Biometric Fusion.
  *
  * CRITICAL ARCHITECTURAL INVARIANT:
  * Speaker similarity and synthetic probability are NEVER arithmetically averaged.
  * High similarity + High synthetic probability = CRITICAL Clone Signature.
  *
- * CALIBRATION & SATURATION SUPPRESSION (TriNetra Fusion.kt:114-128):
+ * CALIBRATION & SATURATION SUPPRESSION (VOCIS Fusion Engine (Adaptive Calibration)):
  * If the speaker's own authentic voice or microphone chain reads near the ceiling
  * (baselineSynthetic + margin >= 1.0), the anti-spoof model cannot distinguish
  * them from a clone. In this state (isReliable = false / UNRELIABLE), the spoof
@@ -52,7 +52,7 @@ class BiometricFusionEngine(
         val isHighSimilarity = similarity >= speakerMatchThreshold
         val isLowSimilarity  = similarity < speakerMismatchThreshold
 
-        // ── Saturation / Calibration Unreliable Gate (TriNetra Fusion.kt:76-77) ─────
+        // ── Saturation / Calibration Unreliable Gate (VOCIS Fusion Engine (Saturation Suppression Gate)) ─────
         // Baseline measured at or near the ceiling means the detector called the user's
         // own genuine recording synthetic. Suppress the false clone finding.
         if (!isReliable || !isAasistReliable) {

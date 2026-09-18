@@ -33,7 +33,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 /**
  * Android Foreground Service managing microphone capture and live Voice Clone Defence (VCD)
  * during cellular or speakerphone calls.
- * Directly referenced from TriNetra's LiveVerificationService & VerificationPipeline.
+ * Directly referenced from VOCIS LiveVerificationService & VerificationPipeline.
  */
 class LiveVerificationService : Service() {
 

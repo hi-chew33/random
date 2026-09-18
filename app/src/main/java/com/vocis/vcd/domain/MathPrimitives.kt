@@ -13,7 +13,7 @@ object MathPrimitives {
     const val TARGET_DBFS = -30f
 
     /**
-     * Loudness normalisation to -30 dBFS, matching TriNetra and Resemblyzer.
+     * Loudness normalisation to -30 dBFS, matching Resemblyzer standard.
      * Prevents caller volume from distorting speaker embedding similarities.
      */
     fun toTargetDbfs(

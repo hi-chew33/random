@@ -17,7 +17,7 @@ import kotlinx.coroutines.launch
 
 /**
  * BroadcastReceiver monitoring Android telephony phone state transitions.
- * Directly referenced from TriNetra's ProtectionController and PhoneStateReceiver.
+ * Directly referenced from VOCIS ProtectionController and TelephonyStateMonitor.
  */
 class TelephonyStateMonitor : BroadcastReceiver() {
 

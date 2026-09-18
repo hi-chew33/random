@@ -12,7 +12,7 @@ import java.util.UUID
 
 /**
  * Cross-channel 5-minute sliding temporal correlation engine.
- * Faithfully ports TriNetra's multi-event attack correlation pipeline:
+ * Faithfully ports VOCIS multi-event attack correlation pipeline:
  * - SMS Intent Classifier (OTP, Financial, Urgency, Digital Arrest, Telecom, Utility, Parcel)
  * - URL Analyzer (Phishing, IP in URL, URL Shorteners)
  * - Callback Number Mismatch (Caller != number advertised in suspicious SMS)
@@ -54,7 +54,7 @@ class AttackContextEngine(
     private val contributingEventIds = mutableListOf<String>()
 
     /**
-     * Ingests incoming SMS and parses deterministic scam signals using TriNetra classifiers.
+     * Ingests incoming SMS and parses deterministic scam signals using VOCIS classifiers.
      */
     suspend fun onSmsReceived(event: SecurityEvent, text: String = "", sender: String = ""): AttackContext = mutex.withLock {
         contributingEventIds.add(event.id)
@@ -63,11 +63,11 @@ class AttackContextEngine(
         val body = if (text.isNotBlank()) text else event.metadata
         val from = if (sender.isNotBlank()) sender else event.identity
 
-        // 1. Run TriNetra SMS Intent Classifier
+        // 1. Run VOCIS SMS Intent Classifier
         val smsSignals = SmsIntentClassifier.classify(body, from)
         contributingSignals.addAll(smsSignals)
 
-        // 2. Run TriNetra URL Analyzer
+        // 2. Run VOCIS URL Analyzer
         val urlSignals = UrlAnalyzer.analyze(body)
         contributingSignals.addAll(urlSignals)
         if (urlSignals.isNotEmpty()) {

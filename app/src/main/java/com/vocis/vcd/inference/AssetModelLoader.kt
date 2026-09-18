@@ -15,7 +15,7 @@ import java.io.File
  * Handles unpacking of bundled models from APK assets to internal storage
  * and initializing ONNX Runtime sessions for speaker embedding and anti-spoofing.
  *
- * Pattern directly referenced from TriNetra's ModelRuntime and WebRtcSttBridge.
+ * Pattern directly referenced from VOCIS ModelRuntime and WebRtcSttBridge.
  */
 object AssetModelLoader {
 

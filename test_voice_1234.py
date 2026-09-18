@@ -128,7 +128,7 @@ def run_tests():
         logits = spoof_out[0]
         probs = softmax2(logits)
         
-        # In AASIST / TriNetra: index 0 is spoof/synthetic, index 1 is bonafide
+        # In AASIST / VOCIS: index 0 is spoof/synthetic, index 1 is bonafide
         prob_synthetic = float(probs[0])
         prob_bonafide = float(probs[1])
         synthetic_probs.append(prob_synthetic)

@@ -90,7 +90,7 @@ class EvidenceFusionEngine {
             )
         }
 
-        // 6. Callback number mismatch (TriNetra Attack Context)
+        // 6. Callback number mismatch (VOCIS Attack Context)
         if (context.hasCallbackMismatch) {
             factors.add(
                 EvidenceFactor(
@@ -101,7 +101,7 @@ class EvidenceFusionEngine {
             )
         }
 
-        // 7. Composite Correlated Attack Context (TriNetra AttackContextEngine)
+        // 7. Composite Correlated Attack Context (VOCIS AttackContextEngine)
         if (context.contextType != ContextType.UNKNOWN && context.contextType != ContextType.OTP_THEFT && context.contextType != ContextType.REMOTE_ACCESS_SCAM) {
             val weight = when (context.contextType) {
                 ContextType.GOVERNMENT_IMPERSONATION -> 50
@@ -144,7 +144,7 @@ class EvidenceFusionEngine {
             }
         }
 
-        // 9. Voice Clone verdict from TriNetra VCD
+        // 9. Voice Clone verdict from VOCIS VCD
         if (isVoiceCloneCritical) {
             factors.add(
                 EvidenceFactor(

@@ -17,7 +17,7 @@ import kotlin.math.sqrt
 
 /**
  * Microphone audio capture engine at 16 kHz mono 16-bit PCM.
- * Directly ported and adapted from TriNetra's battle-tested MicCapture implementation.
+ * Directly ported and adapted from VOCIS low-latency MicCapture implementation.
  *
  * Scope: Uses MediaRecorder.AudioSource.MIC to capture loudspeaker acoustic output
  * during active phone calls without requiring privileged platform signatures.

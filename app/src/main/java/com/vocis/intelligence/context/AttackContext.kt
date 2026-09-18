@@ -3,7 +3,7 @@ package com.vocis.intelligence.context
 /**
  * Composite attack context holding multi-modal cross-channel threat signals.
  * Preserves full backward-compatibility with VOCIS database and Room entities while
- * mapping the complete TriNetra 5-minute temporal attack correlation specification.
+ * mapping the complete VOCIS 5-minute temporal attack correlation specification.
  */
 data class AttackContext(
     val hasActiveOtp: Boolean = false,
@@ -13,7 +13,7 @@ data class AttackContext(
     val activeCallPhoneNumber: String? = null,
     val windowStartMs: Long = 0L,
 
-    // TriNetra Context Correlation Suite
+    // VOCIS Context Correlation Suite
     val contextType: ContextType = ContextType.UNKNOWN,
     val inferredIntent: InferredIntent = InferredIntent.UNKNOWN,
     val detectedPatterns: List<String> = emptyList(),

@@ -13,7 +13,7 @@ import java.nio.FloatBuffer
  * Input node: [1, 64600] float32 tensor representing 16kHz linear audio PCM.
  * Output node: [1, 2] logits [spoof, bonafide].
  *
- * Output matches upstream AASIST code and TriNetra reference:
+ * Output matches upstream AASIST code and VOCIS reference:
  * logits ordered [spoof, bonafide], index 1 is the bonafide score,
  * so synthetic_probability is softmax(logits)[0].
  */
@@ -55,7 +55,7 @@ class OnnxAasistDetector(
                 }
 
                 val probs = MathPrimitives.softmax2(logits)
-                // AASIST logit order is [spoof, bonafide] (see TriNetra OrtModels.kt line 132 & upstream AASIST).
+                // AASIST logit order is [spoof, bonafide] (see AASIST specification).
                 // probs[0] = spoof / synthetic probability
                 // probs[1] = bonafide natural human probability
                 return probs[0]
@@ -87,7 +87,7 @@ class OnnxSpeakerEncoder(
     override fun embed(audioWindow: FloatArray): FloatArray {
         if (audioWindow.isEmpty()) return FloatArray(VcdConstants.EMBEDDING_DIM)
 
-        // Normalise over the whole utterance before splitting, exactly as TriNetra & Resemblyzer do
+        // Normalise over the whole utterance before splitting, exactly as Resemblyzer specification
         val normalized = MathPrimitives.toTargetDbfs(audioWindow)
 
         if (normalized.size < PARTIAL_WIDTH) {
