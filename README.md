@@ -13,6 +13,7 @@
 ## Table of Contents
 1. [The Idea & Problem Statement](#the-idea--problem-statement)
 2. [Core Novelty & Differentiators](#core-novelty--differentiators)
+   - [One-Tap Direct Cyber Crime Cell Reporting (>75% Risk)](#-one-tap-direct-cyber-crime-cell-reporting-risk-score--75)
 3. [System Architecture](#system-architecture)
 4. [System Flow & Interactions](#system-flow--interactions)
 5. [Technology Stack](#technology-stack)
@@ -45,12 +46,34 @@ Modern smartphone users face complex, coordinated social engineering attacks tha
 | **Decision Latency** | Cloud round-trip (500 ms – 3000 ms) | **$\le 1800\text{ ms}$ on-device fail-open timeout budget** |
 | **Digital Arrest Defense**| ❌ None | **10-phase guided defense state machine + SHA-256 sealed forensic PDF dossier** |
 | **Family Emergency SOS**| ❌ None | **Automated SMS dispatch (score > 50) + High-priority audio alarm siren loop (overrides DND)** |
-| **Cyber Cell Reporting** | ❌ None | **One-tap / Automated forensic incident export** for Cyber Crime Cell (1930 / cybercrime.gov.in) on critical threats (>75%) |
+| **Cyber Cell Reporting** | ❌ None | **One-Tap Direct Cyber Crime Cell Reporting** directly from the in-call overlay with full forensic dossier when risk score > 75% |
 
 ### Key Architectural Invariants
 * **Fail-Open Invariant**: If analysis exceeds the $1800\text{ ms}$ budget or encounters system errors during call screening, the call is automatically allowed (`ALLOW_CALL`). Emergency and legitimate calls are never blocked by system failures.
 * **Dual-Score 2D Fusion**: Speaker similarity and synthetic speech probability are **never averaged**. A clone is defined strictly by high speaker match ($\ge 0.75$) combined with high synthetic probability ($\ge \text{calibrated threshold}$).
 * **Anti-Spam Alert Throttling**: Automated family emergency SMS alerts enforce strict 1-SMS-per-call idempotency and a global 5-minute ($300,000\text{ ms}$) cooldown.
+
+---
+
+### 🚨 One-Tap Direct Cyber Crime Cell Reporting (Risk Score > 75%)
+
+A signature defense capability of VOCIS is **instantaneous, one-tap reporting to the Cyber Crime Cell** when an ongoing threat enters the **`CRITICAL` band (risk score $> 75\%$)** (e.g., active Digital Arrest intimidation, banking extortion, or deepfake voice clone):
+
+1. **Zero-Friction In-Call HUD Prompt**:
+   - The user immediately receives a prominent, high-contrast **"One-Tap Report to Cyber Crime Cell"** action directly on the floating in-call HUD overlay and incident alert dialog.
+   - Designed for high-panic, coercive situations: victims under intense extortion do not need to remember emergency numbers, navigate external websites, or manually record caller details during an active attack.
+
+2. **Automated Comprehensive Forensic Dossier**:
+   With a single tap, VOCIS compiles and cryptographically packages the entire attack trail:
+   * **Telecom & Caller Telemetry**: Verified E.164 phone number, carrier network metadata, spoof detection status, call start/end timestamps, and duration.
+   * **Correlated Multi-Vector Evidence**: Exact timestamps of banking OTPs received within the 5-minute correlation window, detected remote desktop package identifiers (*AnyDesk*, *TeamViewer*, *RustDesk*), and phishing URLs.
+   * **Verbatim Transcripts & Coercion Tactics**: Real-time speech transcripts captured by local on-device ASR, flagging explicit legal threats, fake warrants, and police/CBI/ED impersonation.
+   * **Biometric Deepfake Telemetry**: Real-time AASIST synthetic probability scores and Resemblyzer speaker similarity metrics proving voice clone synthesis.
+   * **SHA-256 Cryptographically Sealed PDF Dossier**: Immutable evidentiary report generated on-device via `DigitalArrestPdfGenerator` with tamper-evident digital digest verification.
+
+3. **Instant Escalation & Account Freezing**:
+   - **National Cyber Crime Helpline (1930)**: Pre-populates the national cyber fraud emergency dialer and incident summary with a single touch.
+   - **National Cyber Crime Reporting Portal ([cybercrime.gov.in](https://cybercrime.gov.in))**: Formats structured complaint payloads ready for instantaneous submission to initiate golden-hour bank account freezing before illicit funds can be transferred.
 
 ---
 
@@ -214,9 +237,10 @@ flowchart TB
        • CRITICAL (75-100) ─► BLOCK_CALL + Siren Alarm + Forensic Incident
          │
          ▼
-6. Incident Lifecycle & Cyber Cell Reporting (>75% Score)
+6. Incident Lifecycle & One-Tap Cyber Crime Cell Reporting (>75% Score)
+   ├── Renders immediate "One-Tap Report to Cyber Crime Cell" action on in-call HUD
    ├── Auto-generates SHA-256 cryptographically sealed PDF evidence dossier
-   └── Formats caller telemetry, OTP logs, and coercion transcripts for 1930 Cyber Cell
+   └── Directly pre-populates Helpline 1930 & cybercrime.gov.in complaint payloads
 ```
 
 ---
@@ -251,7 +275,6 @@ flowchart TB
 * **HTTP & Gateway Transport**: OkHttp 4.12.0 with TLS 1.3 for cloud API communication and TextBee emergency SMS gateway fallback
 
 ---
-
 
 ## Security & Privacy Model
 
