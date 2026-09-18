@@ -106,7 +106,8 @@ flowchart TB
     MIC --> BUF
     BUF --> SPK
     BUF --> SPF
-    SPK --> FUS```
+    SPK --> FUS
+```
     
     SPF --> FUS
     FUS --> OV
